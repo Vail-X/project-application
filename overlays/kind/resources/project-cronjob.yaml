@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: project-app-cron
+  labels:
+    app: project-app
+spec:
+  schedule: '*/2 * * * *'
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: project-app
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: project-app
+              image: winsenx/project-app:latest
+              imagePullPolicy: Always
+              env:
+                - name: PYTHONUNBUFFERED
+                  value: '1'
