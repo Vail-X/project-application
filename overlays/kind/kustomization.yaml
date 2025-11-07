@@ -3,5 +3,4 @@ kind: Kustomization
 namespace: application
 
 resources:
-  - ./resources/grafana-deployment.yaml
-  - ./resources/grafana-service.yaml
+  - ./resources/project-cronjob.yaml
