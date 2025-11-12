@@ -11,5 +11,5 @@ COPY log-analyzer.py .
 EXPOSE 8081
 
 # Run the application using Gunicorn for production robustness
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "log-analyzer:app", "--bind", "0.0.0.0:8081"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "log-analyzer:app", "--bind", "0.0.0.0:8081",  "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info"]
 

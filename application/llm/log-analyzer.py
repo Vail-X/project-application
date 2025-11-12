@@ -2,17 +2,28 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import json
 import gzip
+import sys
+import logging
+
+# Configure logging to stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout,
+    force=True
+)
+logger = logging.getLogger(__name__)
 
 class LogEvent(BaseModel):
-    message: str            # The core log message
-    level: str              # Log severity (e.g., ERROR, WARN, FATAL)
-    k8s_container: str      # Kubernetes container name
-    k8s_pod: str            # Kubernetes pod name
-    k8s_namespace: str      # Kubernetes namespace
-    k8s_app_label: str      # Application label from K8s metadata
-    k8s_job_name: str       # Job name from K8s metadata
-    k8s_image: str          # Container image name
-    timestamp: str          # The timestamp of the log event
+    message: str
+    level: str
+    k8s_container: str
+    k8s_pod: str
+    k8s_namespace: str
+    k8s_app_label: str
+    k8s_job_name: str
+    k8s_image: str
+    timestamp: str
 
 app = FastAPI(
     title="LLM Log Analyzer Endpoint",
@@ -24,13 +35,16 @@ def process_with_llm(log_message: str) -> str:
 
 @app.get("/health")
 async def health():
-    print("Health check called")
+    logger.info("🏥 Health check called")
+    sys.stdout.flush()  # Force flush
     return {"status": "healthy"}
 
 @app.post("/analyze")
 async def analyze_log(request: Request):
+    logger.info("📨 Analyze request received")
     raw_body = await request.body()
 
+    # Check if content is gzipped
     if request.headers.get('content-encoding') == 'gzip':
         raw_body = gzip.decompress(raw_body)
 
@@ -40,19 +54,23 @@ async def analyze_log(request: Request):
 
         analysis_result = process_with_llm(event.message)
 
-        print("-" * 50)
-        print(f"✅ Log Received and Analyzed!")
-        print(f"Timestamp: {event.timestamp}")
-        print(f"Pod Name: {event.k8s_pod}")
-        print(f"Log Level: {event.level}")
-        print(f"Message: {event.message}")
-        print(f"LLM Analysis: {analysis_result}")
-        print("-" * 50)
+        logger.info("-" * 50)
+        logger.info(f"✅ Log Received and Analyzed!")
+        logger.info(f"Timestamp: {event.timestamp}")
+        logger.info(f"Pod Name: {event.k8s_pod}")
+        logger.info(f"Log Level: {event.level}")
+        logger.info(f"Message: {event.message}")
+        logger.info(f"LLM Analysis: {analysis_result}")
+        logger.info("-" * 50)
+        sys.stdout.flush()
 
         return {"status": "ok"}
 
     except Exception as e:
-        print(f"❌ ERROR: {str(e)}")
+        logger.error(f"❌ ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
         return {"status": "error", "message": str(e)}, 400
 
 if __name__ == "__main__":
