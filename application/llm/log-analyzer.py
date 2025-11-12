@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import json
-import time
+import gzip
 
 class LogEvent(BaseModel):
     message: str            # The core log message
@@ -24,26 +24,17 @@ def process_with_llm(log_message: str) -> str:
 
 @app.post("/analyze")
 async def analyze_log(request: Request):
-    print("=" * 60)
-    print("📥 RAW REQUEST DEBUG")
-    print("=" * 60)
-    print(f"Content-Type: {request.headers.get('content-type')}")
-    print(f"Headers: {dict(request.headers)}")
-    
-    # Get raw body
     raw_body = await request.body()
-    print(f"Raw Body (bytes): {raw_body}")
-    print(f"Raw Body (string): {raw_body.decode('utf-8')}")
-    
+
+    if request.headers.get('content-encoding') == 'gzip':
+        raw_body = gzip.decompress(raw_body)
+
     try:
-        body_json = await request.json()
-        print(f"Parsed JSON: {json.dumps(body_json, indent=2)}")
-        
-        # Try to parse as LogEvent
+        body_json = json.loads(raw_body)
         event = LogEvent(**body_json)
-        
+
         analysis_result = process_with_llm(event.message)
-        
+
         print("-" * 50)
         print(f"✅ Log Received and Analyzed!")
         print(f"Timestamp: {event.timestamp}")
@@ -52,14 +43,11 @@ async def analyze_log(request: Request):
         print(f"Message: {event.message}")
         print(f"LLM Analysis: {analysis_result}")
         print("-" * 50)
-        
+
         return {"status": "ok"}
-    
+
     except Exception as e:
         print(f"❌ ERROR: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
         return {"status": "error", "message": str(e)}, 400
 
 if __name__ == "__main__":
