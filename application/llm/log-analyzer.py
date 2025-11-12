@@ -31,7 +31,7 @@ async def analyze_log(event: LogEvent):
     print(f"Timestamp: {event.timestamp}")
     print(f"Pod Name: {event.k8s_pod}")
     print(f"Log Level: {event.level}")
-    print(f"Message Snippet: {event.message[:70]}...")
+    print(f"Message: {event.message}")
     print(f"LLM Analysis: {analysis_result}")
     print("-" * 50)
     
@@ -40,4 +40,4 @@ async def analyze_log(event: LogEvent):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8081)

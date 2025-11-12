@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY log-analyzer.py .
+
+# Expose the port matching your internal Vector sink configuration
+EXPOSE 8081
+
+# Run the application using Gunicorn for production robustness
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "log-analyzer:app", "--bind", "0.0.0.0:8081"]
+
