@@ -4,3 +4,4 @@ namespace: application
 
 resources:
   - ./resources/project-cronjob.yaml
+  - ./resources/project-log-analyzer-manifest.yaml
