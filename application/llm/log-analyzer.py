@@ -44,7 +44,6 @@ async def analyze_log(request: Request):
     logger.info("📨 Analyze request received")
     raw_body = await request.body()
 
-    # Check if content is gzipped
     if request.headers.get('content-encoding') == 'gzip':
         raw_body = gzip.decompress(raw_body)
 
@@ -52,19 +51,31 @@ async def analyze_log(request: Request):
         body_json = json.loads(raw_body)
         event = LogEvent(**body_json)
 
-        analysis_result = process_with_llm(event.message)
+        events_data = body_json if isinstance(body_json, list) else [body_json]
 
-        logger.info("-" * 50)
-        logger.info(f"✅ Log Received and Analyzed!")
-        logger.info(f"Timestamp: {event.timestamp}")
-        logger.info(f"Pod Name: {event.k8s_pod}")
-        logger.info(f"Log Level: {event.level}")
-        logger.info(f"Message: {event.message}")
-        logger.info(f"LLM Analysis: {analysis_result}")
-        logger.info("-" * 50)
+        results = []
+        for item in events_data:
+            event = LogEvent(**item)
+            analysis_result = process_with_llm(event.message)
+
+            logger.info("-" * 50)
+            logger.info(f"✅ Log Received and Analyzed!")
+            logger.info(f"Timestamp: {event.timestamp}")
+            logger.info(f"Pod Name: {event.k8s_pod}")
+            logger.info(f"Log Level: {event.level}")
+            logger.info(f"Message: {event.message}")
+            logger.info(f"LLM Analysis: {analysis_result}")
+            logger.info("-" * 50)
+
+            results.append({
+                "status": "processed",
+                "timestamp": event.timestamp,
+                "analysis": analysis_result
+            })
+
         sys.stdout.flush()
 
-        return {"status": "ok"}
+        return {"status": "ok", "results": results}
 
     except Exception as e:
         logger.error(f"❌ ERROR: {str(e)}")
