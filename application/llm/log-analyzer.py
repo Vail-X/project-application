@@ -22,6 +22,11 @@ app = FastAPI(
 def process_with_llm(log_message: str) -> str:
     return "Process log msg: " + log_message
 
+@app.get("/health")
+async def health():
+    print("Health check called")
+    return {"status": "healthy"}
+
 @app.post("/analyze")
 async def analyze_log(request: Request):
     raw_body = await request.body()
