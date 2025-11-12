@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-log-analyzer-deployment
+  namespace: application
+  labels:
+    app: project-log-analyzer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: project-log-analyzer
+  template:
+    metadata:
+      labels:
+        app: project-log-analyzer
+    spec:
+      containers:
+        - name: project-log-analyzer
+          image: winsenx/project-log-analyzer:v1.0 
+          ports:
+            - containerPort: 8081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-log-analyzer-service
+  namespace: application
+spec:
+  type: ClusterIP
+  selector:
+    app: project-log-analyzer
+  ports:
+    - protocol: TCP
+      name: http-analyze
+      port: 8081
+      targetPort: 8081
+
