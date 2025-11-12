@@ -49,7 +49,6 @@ async def analyze_log(request: Request):
 
     try:
         body_json = json.loads(raw_body)
-        event = LogEvent(**body_json)
 
         events_data = body_json if isinstance(body_json, list) else [body_json]
 
