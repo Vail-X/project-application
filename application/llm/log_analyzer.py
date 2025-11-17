@@ -7,7 +7,14 @@ import asyncio
 import time
 from datetime import datetime
 
-from llm_processor import LogEvent, process_with_llm
+from application.llm.log_memory import (
+    LogEvent,
+    throttled_process,
+    get_fingerprint,
+    PROCESSED_FINGERPRINTS,
+    CACHE_EXPIRY_SECONDS,
+    background_cache_cleanup
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,57 +24,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-MAX_LLM_CONCURRENCY = 5
-llm_semaphore = asyncio.Semaphore(MAX_LLM_CONCURRENCY)
-
-PROCESSED_FINGERPRINTS = {}
-CACHE_EXPIRY_SECONDS = 600
-CLEANUP_INTERVAL_SECONDS = 300
-
-async def throttled_process(event: LogEvent):
-    """Acquires the semaphore before executing the synchronous LLM call."""
-    async with llm_semaphore:
-        return await asyncio.to_thread(process_with_llm, event)
-
-def get_fingerprint(event: LogEvent):
-    """Creates a unique key for deduplication based on service and error message."""
-    message_key = event.message[:50]
-    return f"{event.k8s_app_label}:{message_key}"
-
-def cleanup_fingerprint_cache():
-    """Removes expired fingerprints from the in-memory cache."""
-    current_time = time.time()
-    keys_to_delete = []
-
-    for fingerprint, expiry_time in PROCESSED_FINGERPRINTS.items():
-        if expiry_time < current_time:
-            keys_to_delete.append(fingerprint)
-
-    for key in keys_to_delete:
-        del PROCESSED_FINGERPRINTS[key]
-
-    logger.info(f"🧹 Cleaned up {len(keys_to_delete)} expired fingerprints. Cache size: {len(PROCESSED_FINGERPRINTS)}")
-
-async def background_cache_cleanup():
-    """Runs the cleanup function periodically."""
-    while True:
-        cleanup_fingerprint_cache()
-        await asyncio.sleep(CLEANUP_INTERVAL_SECONDS)
-
-# --- FastAPI App Setup ---
-
 app = FastAPI(
     title="LLM Log Analyzer Endpoint",
     description="Receives filtered ERROR logs from Vector for processing."
 )
 
-@app.on_event("startup")
+@app.lifespan("startup")
 async def start_background_tasks():
     asyncio.create_task(background_cache_cleanup())
 
 @app.get("/health")
 async def health():
-    logger.info("🏥 Health check called")
+    logger.info("Health check called")
     sys.stdout.flush()
     return {"status": "healthy"}
 
@@ -96,7 +64,7 @@ async def analyze_log(request: Request):
             fingerprint = get_fingerprint(event)
 
             if fingerprint in PROCESSED_FINGERPRINTS and current_time < PROCESSED_FINGERPRINTS[fingerprint]:
-                logger.info(f"⏭️ Skipping duplicate log from {event.k8s_app_label} (Cached until {datetime.fromtimestamp(PROCESSED_FINGERPRINTS[fingerprint]).strftime('%H:%M:%S')})")
+                logger.info(f"Skipping duplicate log from {event.k8s_app_label} (Cached until {datetime.fromtimestamp(PROCESSED_FINGERPRINTS[fingerprint]).strftime('%H:%M:%S')})")
                 continue
 
             PROCESSED_FINGERPRINTS[fingerprint] = current_time + CACHE_EXPIRY_SECONDS
@@ -129,12 +97,11 @@ async def analyze_log(request: Request):
                 }
 
             logger.info("-" * 50)
-            logger.info(f"Timestamp: {event.timestamp}")
             logger.info(f"Pod Name: {event.k8s_pod}")
             logger.info(f"Message: {event.message}")
-            logger.info(f"LLM Affect: {analysis_result.get('service_affected')}")
-            logger.info(f"LLM Cause: {analysis_result.get('probable_cause')}")
-            logger.info(f"LLM Suggestion: {analysis_result.get('suggested_action')}")
+            logger.info(f"Service Affected: {analysis_result.get('service_affected')}")
+            logger.info(f"Cause: {analysis_result.get('probable_cause')}")
+            logger.info(f"Suggestion: {analysis_result.get('suggested_action')}")
             logger.info("-" * 50)
 
         sys.stdout.flush()
