@@ -18,9 +18,15 @@ spec:
     spec:
       containers:
         - name: project-log-analyzer
-          image: winsenx/project-log-analyzer:v1.2.2
+          image: winsenx/project-log-analyzer:v1.3
           ports:
             - containerPort: 8081
+          env:
+            - name: HUGGINGFACEHUB_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-api-secret
+                  key: HF_TOKEN_KEY
 ---
 apiVersion: v1
 kind: Service

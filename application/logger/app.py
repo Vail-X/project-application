@@ -115,7 +115,7 @@ def generate_log():
     transaction_id = f"txn_{uuid.uuid4().hex[:6]}"
     timestamp = now_myt_iso()
 
-    if random.random() < 0.1:  # 10% error rate
+    if random.random() < 0.01:  # 1% error rate
         error_code, description = random.choice(ERRORS)
         log = {
             "timestamp": timestamp,
@@ -138,6 +138,6 @@ def generate_log():
 
 
 if __name__ == "__main__":
-    for _ in range(random.randint(10, 40)):
+    for _ in range(random.randint(10, 50)):
         generate_log()
         time.sleep(random.uniform(0.2, 0.8))
