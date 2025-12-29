@@ -83,28 +83,27 @@ async def analyze_log(request: Request, background_tasks: BackgroundTasks):
         results_data = await asyncio.gather(*analysis_tasks)
 
         for event, analysis_result_json_str in zip(logs_to_process, results_data):
+            if analysis_result_json_str is None:
+                logger.warning(f"Skipping email for pod {event.k8s_pod} because LLM analysis failed.")
+                continue
+
             cleaned_str = analysis_result_json_str.strip()
             if cleaned_str.startswith("```json"):
                 cleaned_str = cleaned_str.strip('`').lstrip('json').strip()
 
             try:
                 analysis_result = json.loads(cleaned_str)
+                logger.info("-" * 50)
+                logger.info(f"Pod Name: {event.k8s_pod}")
+                logger.info(f"Message: {event.message}")
+                logger.info(f"Service Affected: {analysis_result.get('service_affected')}")
+                logger.info(f"Cause: {analysis_result.get('probable_cause')}")
+                logger.info(f"Suggestion: {analysis_result.get('suggested_action')}")
+                logger.info("-" * 50)
+                background_tasks.add_task(send_alert_email, event, analysis_result)
             except json.JSONDecodeError as e:
-                logger.error(f"LLM output error (Bad JSON) for pod {event.k8s_pod}: {e}. Raw: {analysis_result_json_str[:150]}...")
-                analysis_result = {
-                    "service_affected": event.k8s_app_label,
-                    "probable_cause": "LLM returned unparseable JSON output. See server logs for raw response.",
-                    "suggested_action": "Check LLM service status and refine system prompt for strict JSON adherence."
-                }
-
-            logger.info("-" * 50)
-            logger.info(f"Pod Name: {event.k8s_pod}")
-            logger.info(f"Message: {event.message}")
-            logger.info(f"Service Affected: {analysis_result.get('service_affected')}")
-            logger.info(f"Cause: {analysis_result.get('probable_cause')}")
-            logger.info(f"Suggestion: {analysis_result.get('suggested_action')}")
-            logger.info("-" * 50)
-            background_tasks.add_task(send_alert_email, event, analysis_result)
+                logger.error(f"Failed to parse LLM JSON for {event.k8s_pod}: {e}")
+                continue
 
         sys.stdout.flush()
 

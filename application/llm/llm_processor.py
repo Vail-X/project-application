@@ -5,6 +5,7 @@ from huggingface_hub import InferenceClient
 
 logger = logging.getLogger(__name__)
 
+
 class LogEvent(BaseModel):
     message: str
     level: str
@@ -16,13 +17,23 @@ class LogEvent(BaseModel):
     k8s_image: str
     timestamp: str
 
+
 class AnalysisResult(BaseModel):
     """Defines the structured JSON output expected from the LLM."""
-    service_affected: str = Field(..., description="The name of the service or component affected.")
-    probable_cause: str = Field(..., description="A concise explanation of the most likely root cause.")
-    suggested_action: str = Field(..., description="A specific, actionable step to resolve the issue.")
+
+    service_affected: str = Field(
+        ..., description="The name of the service or component affected."
+    )
+    probable_cause: str = Field(
+        ..., description="A concise explanation of the most likely root cause."
+    )
+    suggested_action: str = Field(
+        ..., description="A specific, actionable step to resolve the issue."
+    )
+
 
 client = InferenceClient(api_key=os.getenv("HUGGINGFACEHUB_API_TOKEN"))
+
 
 def process_with_llm(event: LogEvent) -> str:
     system_prompt = (
@@ -57,7 +68,7 @@ def process_with_llm(event: LogEvent) -> str:
         return AnalysisResult(
             service_affected="System",
             probable_cause="API Key Missing",
-            suggested_action="Set HUGGINGFACEHUB_API_TOKEN environment variable."
+            suggested_action="Set HUGGINGFACEHUB_API_TOKEN environment variable.",
         ).model_dump_json()
 
     try:
@@ -65,12 +76,9 @@ def process_with_llm(event: LogEvent) -> str:
             model="moonshotai/Kimi-K2-Thinking",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
+                {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
 
         raw_response = completion.choices[0].message.content
@@ -79,9 +87,11 @@ def process_with_llm(event: LogEvent) -> str:
         return raw_response
 
     except Exception as e:
-        logger.error(f"Error during LLM API call: {e}")
-        return AnalysisResult(
-            service_affected="LLM Service",
-            probable_cause="LLM API call failed",
-            suggested_action=f"Check network/LLM service health. Error: {str(e)}"
-        ).model_dump_json()
+        error_msg = str(e)
+        if "402" in error_msg or "usage limit" in error_msg.lower():
+            logger.error(
+                f"CRITICAL: LLM Quota exceeded or Payment Required: {error_msg}"
+            )
+        else:
+            logger.error(f"Error during LLM API call: {e}")
+        return None

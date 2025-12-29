@@ -20,6 +20,7 @@ async def throttled_process(event: LogEvent):
 def get_fingerprint(event: LogEvent):
     """Creates a unique key for deduplication based on service and error message."""
     message_key = event.message[:50]
+    logger.info(f"Finger {event.message[:50]}")
     return f"{event.k8s_app_label}:{message_key}"
 
 def cleanup_fingerprint_cache():
