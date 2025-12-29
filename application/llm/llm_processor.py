@@ -1,5 +1,3 @@
-# llm_processor.py
-
 import os
 import logging
 from pydantic import BaseModel, Field
@@ -75,7 +73,10 @@ def process_with_llm(event: LogEvent) -> str:
             response_format={"type": "json_object"}
         )
 
-        return completion.choices[0].message.content
+        raw_response = completion.choices[0].message.content
+        logger.info(f"Raw LLM Response: {raw_response}")
+
+        return raw_response
 
     except Exception as e:
         logger.error(f"Error during LLM API call: {e}")

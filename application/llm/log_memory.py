@@ -1,7 +1,6 @@
 import asyncio
 import time
 import logging
-
 from llm_processor import LogEvent, process_with_llm
 
 MAX_LLM_CONCURRENCY = 5

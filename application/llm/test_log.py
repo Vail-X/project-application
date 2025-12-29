@@ -54,7 +54,7 @@ log_event_4 = {
 }
 
 # Combine all log events into a single list
-log_events_list = [log_event_1, log_event_2, log_event_3, log_event_4]
+log_events_list = [log_event_4]
 
 json_data_bytes = json.dumps(log_events_list).encode('utf-8')
 

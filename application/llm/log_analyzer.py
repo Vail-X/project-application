@@ -6,8 +6,9 @@ import logging
 import asyncio
 import time
 from datetime import datetime
-
-from application.llm.log_memory import (
+from fastapi import BackgroundTasks
+from email_notification import send_alert_email
+from log_memory import (
     LogEvent,
     throttled_process,
     get_fingerprint,
@@ -29,7 +30,7 @@ app = FastAPI(
     description="Receives filtered ERROR logs from Vector for processing."
 )
 
-@app.lifespan("startup")
+@app.on_event("startup")
 async def start_background_tasks():
     asyncio.create_task(background_cache_cleanup())
 
@@ -40,7 +41,7 @@ async def health():
     return {"status": "healthy"}
 
 @app.post("/analyze")
-async def analyze_log(request: Request):
+async def analyze_log(request: Request, background_tasks: BackgroundTasks):
     raw_body_bytes = await request.body()
     if request.headers.get('content-encoding') == 'gzip':
         try:
@@ -103,6 +104,7 @@ async def analyze_log(request: Request):
             logger.info(f"Cause: {analysis_result.get('probable_cause')}")
             logger.info(f"Suggestion: {analysis_result.get('suggested_action')}")
             logger.info("-" * 50)
+            background_tasks.add_task(send_alert_email, event, analysis_result)
 
         sys.stdout.flush()
 

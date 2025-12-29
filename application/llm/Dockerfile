@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY log_analyzer.py .
 COPY llm_processor.py .
+COPY log_memory.py .
+COPY email_notification.py .
 
 # Expose the port matching your internal Vector sink configuration
 EXPOSE 8081

@@ -16,7 +16,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: project-app
-              image: winsenx/project-app:latest
+              image: winsenx/project-app:v2.0
               imagePullPolicy: Always
               env:
                 - name: PYTHONUNBUFFERED
