@@ -122,7 +122,7 @@ def send_alert_email(event, analysis):
 
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()  
+            server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
             logger.info(f"📧 Alert email sent to {RECEIVER_EMAIL}")
