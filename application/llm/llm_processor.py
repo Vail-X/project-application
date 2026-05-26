@@ -73,7 +73,7 @@ def process_with_llm(event: LogEvent) -> str:
 
     try:
         completion = client.chat.completions.create(
-            model="moonshotai/Kimi-K2-Thinking",
+            model="deepseek-ai/DeepSeek-R1:novita",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

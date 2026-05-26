@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: project-log-analyzer
-          image: winsenx/project-log-analyzer:v2.1
+          image: vailx/project-log-analyzer:v1.0
           ports:
             - containerPort: 8081
           env:
@@ -51,4 +51,3 @@ spec:
       name: http-analyze
       port: 8081
       targetPort: 8081
-
